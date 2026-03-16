@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Atualizado para v4
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1
@@ -37,13 +37,14 @@ jobs:
           haxelib run lime setup
 
       - name: Configure Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3 # Atualizado para v3
 
       - name: Build APK (Debug Mode)
         run: haxelib run lime build android -debug
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # O GRANDE CORRETOR: Atualizado para v4
         with:
           name: VS-Void-Mobile-DEBUG-APK
           path: export/debug/android/bin/app/build/outputs/apk/debug/*.apk
+          retention-days: 5 # Opcional: Mantém o arquivo por 5 dias
