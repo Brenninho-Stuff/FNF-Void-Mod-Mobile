@@ -13,6 +13,10 @@ jobs:
   buildAndroid:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_VERSION: 21.4.7075529
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +34,8 @@ jobs:
 
       - name: Install Android NDK
         run: |
-          sdkmanager --install "ndk;21.4.7075529"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/21.4.7075529" >> $GITHUB_ENV
+          sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+          echo "ANDROID_NDK_HOME=${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1
@@ -41,26 +45,30 @@ jobs:
       - name: Install Libraries
         run: |
           haxelib setup ~/haxelib
-          haxelib install lime        4.0.3  --quiet
-          haxelib install openfl       9.2.2  --quiet
-          haxelib install flixel       4.11.0 --quiet
+          haxelib install lime         4.0.3  --quiet
+          haxelib install openfl        9.2.2  --quiet
+          haxelib install flixel        4.11.0 --quiet
           haxelib install flixel-addons 2.11.0 --quiet
-          haxelib install flixel-ui    2.5.0  --quiet
-          haxelib install hscript      2.5.0  --quiet
-          haxelib install actuate      1.9.0  --quiet
-          haxelib install hxcpp               --quiet
-          haxelib install polymod      1.6.0  --quiet
+          haxelib install flixel-ui     2.5.0  --quiet
+          haxelib install hscript       2.5.0  --quiet
+          haxelib install actuate       1.9.0  --quiet
+          haxelib install hxcpp                --quiet
+          haxelib install polymod       1.6.0  --quiet
           haxelib git extension-androidtools https://github.com/jigsaw-4277821/extension-androidtools.git --quiet
           haxelib run lime setup
 
       - name: Configure Lime for Android
         run: |
-          haxelib run lime config ANDROID_SDK $ANDROID_SDK_ROOT
-          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
-          haxelib run lime config JAVA_HOME $JAVA_HOME
+          haxelib run lime config ANDROID_SDK   ${{ env.ANDROID_SDK_ROOT }}
+          haxelib run lime config ANDROID_NDK_ROOT ${{ env.ANDROID_NDK_HOME }}
+          haxelib run lime config JAVA_HOME     $JAVA_HOME
 
       - name: Build APK (Debug)
         run: haxelib run lime build android -debug -D mobile -nosound -yesall
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_HOME }}
+          JAVA_HOME: ${{ env.JAVA_HOME }}
 
       - name: Find APK
         id: find_apk
