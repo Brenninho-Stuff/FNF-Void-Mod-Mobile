@@ -1,0 +1,49 @@
+Name: Android Debug Build
+on: 
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  buildAndroid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install Libraries
+        run: |
+          haxelib setup ~/haxelib
+          haxelib install lime 7.9.0
+          haxelib install openfl 9.1.0
+          haxelib install flixel 4.11.0
+          haxelib install flixel-addons
+          haxelib install flixel-ui
+          haxelib install hscript
+          haxelib install hxcpp
+          haxelib install extension-androidtools
+          haxelib install extension-googleplayservices
+          haxelib git polymod https://github.com/larsiusprime/polymod.git
+          haxelib git extension-webm https://github.com/KadeDev/extension-webm
+          haxelib run lime setup
+
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Build APK (Debug Mode)
+        # O segredo está aqui: mudamos de -release para -debug
+        run: haxelib run lime build android -debug
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: VS-Void-Mobile-DEBUG-APK
+          # O caminho da pasta muda de /release/ para /debug/
+          path: export/debug/android/bin/app/build/outputs/apk/debug/*.apk
