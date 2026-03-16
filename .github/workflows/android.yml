@@ -1,50 +1,76 @@
 name: Android Debug Build
+
 on:
   push:
     branches:
-      - main
+      - FNF-Void-Mod
   pull_request:
     branches:
-      - main
+      - FNF-Void-Mod
   workflow_dispatch:
 
 jobs:
   buildAndroid:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 # Atualizado para v4
+        uses: actions/checkout@v4
+        with:
+          ref: FNF-Void-Mod
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;21.4.7075529"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/21.4.7075529" >> $GITHUB_ENV
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.4
 
       - name: Install Libraries
         run: |
           haxelib setup ~/haxelib
-          haxelib install lime 7.9.0
-          haxelib install openfl 9.1.0
-          haxelib install flixel 4.11.0
-          haxelib install flixel-addons
-          haxelib install flixel-ui
-          haxelib install hscript
-          haxelib install hxcpp
-          haxelib install extension-androidtools
-          haxelib install extension-googleplayservices
-          haxelib git polymod https://github.com/larsiusprime/polymod.git
-          haxelib git extension-webm https://github.com/KadeDev/extension-webm
+          haxelib install lime        4.0.3  --quiet
+          haxelib install openfl       9.2.2  --quiet
+          haxelib install flixel       4.11.0 --quiet
+          haxelib install flixel-addons 2.11.0 --quiet
+          haxelib install flixel-ui    2.5.0  --quiet
+          haxelib install hscript      2.5.0  --quiet
+          haxelib install actuate      1.9.0  --quiet
+          haxelib install hxcpp               --quiet
+          haxelib install polymod      1.6.0  --quiet
+          haxelib git extension-androidtools https://github.com/jigsaw-4277821/extension-androidtools.git --quiet
           haxelib run lime setup
 
-      - name: Configure Android SDK
-        uses: android-actions/setup-android@v3 # Atualizado para v3
+      - name: Configure Lime for Android
+        run: |
+          haxelib run lime config ANDROID_SDK $ANDROID_SDK_ROOT
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME
 
-      - name: Build APK (Debug Mode)
-        run: haxelib run lime build android -debug
+      - name: Build APK (Debug)
+        run: haxelib run lime build android -debug -D mobile -nosound -yesall
+
+      - name: Find APK
+        id: find_apk
+        run: |
+          APK=$(find export/debug/android/bin -name "*.apk" | head -n 1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # O GRANDE CORRETOR: Atualizado para v4
+        uses: actions/upload-artifact@v4
         with:
-          name: VS-Void-Mobile-DEBUG-APK
-          path: export/debug/android/bin/app/build/outputs/apk/debug/*.apk
-          retention-days: 5 # Opcional: Mantém o arquivo por 5 dias
+          name: FNF-VsVoid-Android-Debug
+          path: ${{ steps.find_apk.outputs.apk_path }}
+          retention-days: 7
