@@ -1,4 +1,4 @@
-Name: Android Debug Build
+name: Android Build Debug
 on: 
   push:
     branches: [ main ]
@@ -37,13 +37,13 @@ jobs:
       - name: Configure Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Build APK (Debug Mode)
-        # O segredo está aqui: mudamos de -release para -debug
+      - name: Build APK (Debug)
+        # Mudança principal: de -release para -debug
         run: haxelib run lime build android -debug
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: VS-Void-Mobile-DEBUG-APK
-          # O caminho da pasta muda de /release/ para /debug/
+          name: VS-Void-Mobile-Debug
+          # O caminho muda de /release/ para /debug/ conforme a estrutura do Lime/Haxe
           path: export/debug/android/bin/app/build/outputs/apk/debug/*.apk
