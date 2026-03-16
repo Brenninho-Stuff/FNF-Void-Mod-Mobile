@@ -4,6 +4,10 @@ import lime.app.Application;
 #if windows
 import Discord.DiscordClient;
 #end
+#if android
+import android.Tools as AndroidTools;
+import extension.googleplayservices.GooglePlayServices;
+#end
 import openfl.display.BlendMode;
 import openfl.text.TextFormat;
 import flixel.util.FlxColor;
@@ -15,117 +19,129 @@ import openfl.Lib;
 import openfl.display.FPS;
 import openfl.display.Sprite;
 import openfl.events.Event;
+import openfl.system.System;
 
 class Main extends Sprite
 {
-	var gameWidth:Int = 1280; // Width of the game in pixels (might be less / more in actual pixels depending on your zoom).
-	var gameHeight:Int = 720; // Height of the game in pixels (might be less / more in actual pixels depending on your zoom).
-	var initialState:Class<FlxState> = TitleState; // The FlxState the game starts with.
-	var zoom:Float = -1; // If -1, zoom is automatically calculated to fit the window dimensions.
-	var framerate:Int = 120; // How many frames per second the game should run at.
-	var skipSplash:Bool = true; // Whether to skip the flixel splash screen that appears in release mode.
-	var startFullscreen:Bool = false; // Whether to start the game in fullscreen on desktop targets
+    var gameWidth:Int = 1280; 
+    var gameHeight:Int = 720; 
+    var initialState:Class<FlxState> = TitleState; 
+    var zoom:Float = -1; 
+    var framerate:Int = 60; // 60 FPS é mais estável para a maioria dos celulares
+    var skipSplash:Bool = true; 
+    var startFullscreen:Bool = true; 
 
-	public static var watermarks = true; // Whether to put Kade Engine literally anywhere
+    public static var watermarks = true; 
 
-	// You can pretty much ignore everything from here on - your code should go in your states.
+    public static function main():Void
+    {
+        Lib.current.addChild(new Main());
+    }
 
-	public static function main():Void
-	{
+    public function new()
+    {
+        super();
 
-		// quick checks 
+        if (stage != null)
+        {
+            init();
+        }
+        else
+        {
+            addEventListener(Event.ADDED_TO_STAGE, init);
+        }
+    }
 
-		Lib.current.addChild(new Main());
-	}
+    private function init(?E:Event):Void
+    {
+        if (hasEventListener(Event.ADDED_TO_STAGE))
+        {
+            removeEventListener(Event.ADDED_TO_STAGE, init);
+        }
 
-	public function new()
-	{
-		super();
+        setupGame();
+    }
 
-		if (stage != null)
-		{
-			init();
-		}
-		else
-		{
-			addEventListener(Event.ADDED_TO_STAGE, init);
-		}
-	}
+    private function setupGame():Void
+    {
+        var stageWidth:Int = Lib.current.stage.stageWidth;
+        var stageHeight:Int = Lib.current.stage.stageHeight;
 
-	public static var webmHandler:WebmHandler;
+        if (zoom == -1)
+        {
+            var ratioX:Float = stageWidth / gameWidth;
+            var ratioY:Float = stageHeight / gameHeight;
+            zoom = Math.min(ratioX, ratioY);
+            gameWidth = Math.ceil(stageWidth / zoom);
+            gameHeight = Math.ceil(stageHeight / zoom);
+        }
 
-	private function init(?E:Event):Void
-	{
-		if (hasEventListener(Event.ADDED_TO_STAGE))
-		{
-			removeEventListener(Event.ADDED_TO_STAGE, init);
-		}
+        // Inicialização do Google Play Services no Android
+        #if android
+        try {
+            GooglePlayServices.init();
+            trace("Google Play Services Inicializado");
+        } catch (e:Dynamic) {
+            trace("Erro ao iniciar Google Play: " + e);
+        }
+        #end
 
-		setupGame();
-	}
+        #if cpp
+        initialState = Caching;
+        game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
+        #else
+        game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
+        #end
 
-	private function setupGame():Void
-	{
-		var stageWidth:Int = Lib.current.stage.stageWidth;
-		var stageHeight:Int = Lib.current.stage.stageHeight;
+        addChild(game);
 
-		if (zoom == -1)
-		{
-			var ratioX:Float = stageWidth / gameWidth;
-			var ratioY:Float = stageHeight / gameHeight;
-			zoom = Math.min(ratioX, ratioY);
-			gameWidth = Math.ceil(stageWidth / zoom);
-			gameHeight = Math.ceil(stageHeight / zoom);
-		}
+        // FPS Counter ajustado para Mobile (um pouco maior para ser legível)
+        fpsCounter = new FPS(10, 10, 0xFFFFFF);
+        addChild(fpsCounter);
+        
+        // Ativa o contador de FPS baseado no save, se existir
+        if (FlxG.save.data.fps != null) {
+            toggleFPS(FlxG.save.data.fps);
+        }
 
-		#if cpp
-		initialState = Caching;
-		game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
-		#else
-		game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
-		#end
-		addChild(game);
-		#if windows
-		DiscordClient.initialize();
+        #if windows
+        DiscordClient.initialize();
+        #end
 
-		Application.current.onExit.add (function (exitCode) {
-			DiscordClient.shutdown();
-		 });
-		 
-		#end
+        // Fechamento limpo do app
+        Application.current.onExit.add (function (exitCode) {
+            #if windows
+            DiscordClient.shutdown();
+            #end
+            System.gc(); // Limpa memória ao sair
+        });
+    }
 
-		#if !mobile
-		fpsCounter = new FPS(10, 3, 0xFFFFFF);
-		addChild(fpsCounter);
-		toggleFPS(FlxG.save.data.fps);
-		#end
-	}
+    var game:FlxGame;
+    var fpsCounter:FPS;
 
-	var game:FlxGame;
+    public function toggleFPS(fpsEnabled:Bool):Void {
+        if (fpsCounter != null)
+            fpsCounter.visible = fpsEnabled;
+    }
 
-	var fpsCounter:FPS;
+    public function changeFPSColor(color:FlxColor)
+    {
+        fpsCounter.textColor = color;
+    }
 
-	public function toggleFPS(fpsEnabled:Bool):Void {
-		fpsCounter.visible = fpsEnabled;
-	}
+    public function setFPSCap(cap:Float)
+    {
+        openfl.Lib.current.stage.frameRate = cap;
+    }
 
-	public function changeFPSColor(color:FlxColor)
-	{
-		fpsCounter.textColor = color;
-	}
+    public function getFPSCap():Float
+    {
+        return openfl.Lib.current.stage.frameRate;
+    }
 
-	public function setFPSCap(cap:Float)
-	{
-		openfl.Lib.current.stage.frameRate = cap;
-	}
-
-	public function getFPSCap():Float
-	{
-		return openfl.Lib.current.stage.frameRate;
-	}
-
-	public function getFPS():Float
-	{
-		return fpsCounter.currentFPS;
-	}
+    public function getFPS():Float
+    {
+        return fpsCounter.currentFPS;
+    }
 }
