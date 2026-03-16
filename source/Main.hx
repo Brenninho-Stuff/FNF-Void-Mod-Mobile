@@ -6,7 +6,6 @@ import Discord.DiscordClient;
 #end
 #if android
 import android.Tools as AndroidTools;
-import extension.googleplayservices.GooglePlayServices;
 #end
 import openfl.display.BlendMode;
 import openfl.text.TextFormat;
@@ -27,7 +26,7 @@ class Main extends Sprite
     var gameHeight:Int = 720; 
     var initialState:Class<FlxState> = TitleState; 
     var zoom:Float = -1; 
-    var framerate:Int = 60; // 60 FPS é mais estável para a maioria dos celulares
+    var framerate:Int = 60;
     var skipSplash:Bool = true; 
     var startFullscreen:Bool = true; 
 
@@ -76,30 +75,17 @@ class Main extends Sprite
             gameHeight = Math.ceil(stageHeight / zoom);
         }
 
-        // Inicialização do Google Play Services no Android
-        #if android
-        try {
-            GooglePlayServices.init();
-            trace("Google Play Services Inicializado");
-        } catch (e:Dynamic) {
-            trace("Erro ao iniciar Google Play: " + e);
-        }
-        #end
-
         #if cpp
         initialState = Caching;
-        game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
-        #else
-        game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
         #end
+
+        game = new FlxGame(gameWidth, gameHeight, initialState, zoom, framerate, framerate, skipSplash, startFullscreen);
 
         addChild(game);
 
-        // FPS Counter ajustado para Mobile (um pouco maior para ser legível)
         fpsCounter = new FPS(10, 10, 0xFFFFFF);
         addChild(fpsCounter);
-        
-        // Ativa o contador de FPS baseado no save, se existir
+
         if (FlxG.save.data.fps != null) {
             toggleFPS(FlxG.save.data.fps);
         }
@@ -108,12 +94,11 @@ class Main extends Sprite
         DiscordClient.initialize();
         #end
 
-        // Fechamento limpo do app
-        Application.current.onExit.add (function (exitCode) {
+        Application.current.onExit.add(function(exitCode) {
             #if windows
             DiscordClient.shutdown();
             #end
-            System.gc(); // Limpa memória ao sair
+            System.gc();
         });
     }
 
